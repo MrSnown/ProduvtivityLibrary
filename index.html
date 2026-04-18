@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Productive Library</title>
+    <style>
+        :root {
+            --color-bg: #1a110b;
+            --color-shelf-wood: #3d2516;
+            --color-shelf-texture: #4a2e1b;
+            --color-shelf-front: #2e1b0f;
+            --color-parchment: #F0E6D2;
+            --color-ui-text: #D7C4A3;
+            --color-sand: #E6C280;
+            --font-main: 'Georgia', serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--color-bg);
+            color: var(--color-ui-text);
+            font-family: var(--font-main);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* --- Bookshelf Area --- */
+        #shelf-container {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 40px 15px 20px 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 50px;
+            background: linear-gradient(to right, #110905 0%, #1a110b 5%, #1a110b 95%, #110905 100%);
+        }
+
+        .shelf {
+            position: relative;
+            min-height: 150px;
+            display: flex;
+            align-items: flex-end;
+            padding: 0 10px;
+            flex-shrink: 0;
+            /* Inner Shelf Depth */
+            background: linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, transparent 20%);
+            border-left: 8px solid #26160d;
+            border-right: 8px solid #26160d;
+        }
+
+        /* The Horizontal Board */
+        .shelf-board {
+            position: absolute;
+            bottom: -15px;
+            left: -15px;
+            right: -15px;
+            height: 15px;
+            background-color: var(--color-shelf-wood);
+            background-image: repeating-linear-gradient(90deg, 
+                transparent, 
+                transparent 40px, 
+                rgba(0,0,0,0.1) 40px, 
+                rgba(0,0,0,0.1) 41px
+            );
+            border-bottom: 4px solid #1a0f08;
+            z-index: 2;
+        }
+
+        /* 3D Top Edge */
+        .shelf-board::before {
+            content: '';
+            position: absolute;
+            top: -12px;
+            left: 0;
+            right: 0;
+            height: 12px;
+            background: var(--color-shelf-texture);
+            transform: perspective(100px) rotateX(40deg);
+            transform-origin: bottom;
+            box-shadow: inset 0 -5px 10px rgba(0,0,0,0.3);
+        }
+
+        /* --- Book Styling --- */
+        .book {
+            position: relative;
+            margin-right: 2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            border: 1px solid rgba(0,0,0,0.4);
+            border-radius: 2px 4px 4px 2px;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.5);
+            background-image: linear-gradient(to right, 
+                rgba(255,255,255,0.15) 0%, 
+                rgba(255,255,255,0.05) 15%, 
+                transparent 40%, 
+                rgba(0,0,0,0.1) 85%, 
+                rgba(0,0,0,0.3) 100%
+            );
+            z-index: 3;
+        }
+
+        .book:active {
+            transform: translateY(-8px) scale(1.05);
+            box-shadow: 0 10px 15px rgba(0,0,0,0.6);
+        }
+
+        .book-title {
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            font-size: 11px;
+            pointer-events: none;
+            overflow: hidden;
+            white-space: nowrap;
+            max-height: 85%;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.4);
+        }
+
+        /* --- Active Session Area --- */
+        #active-area {
+            height: 200px;
+            background: #211611;
+            padding: 15px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            border-top: 4px solid #110905;
+            box-shadow: 0 -10px 20px rgba(0,0,0,0.5);
+        }
+
+        .hourglass-container {
+            width: 70px;
+            height: 110px;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .hourglass-frame {
+            width: 100%;
+            height: 100%;
+            border: 3px solid #3D2314;
+            background: rgba(255,255,255,0.03);
+            clip-path: polygon(0% 0%, 100% 0%, 60% 50%, 100% 100%, 0% 100%, 40% 50%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .sand-top {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 50%;
+            background: var(--color-sand);
+            transform-origin: bottom;
+            transform: scaleY(1);
+        }
+
+        .sand-bottom {
+            position: absolute;
+            bottom: 0; left: 0; width: 100%; height: 50%;
+            background: var(--color-sand);
+            transform-origin: bottom;
+            transform: scaleY(0);
+        }
+
+        .sand-stream {
+            position: absolute;
+            top: 50%; left: 50%; width: 2px; height: 50%;
+            background: var(--color-sand);
+            transform: translateX(-50%);
+            display: none;
+        }
+
+        .parchment {
+            width: 200px;
+            height: 140px;
+            background-color: var(--color-parchment);
+            background-image: radial-gradient(circle at 50% 50%, transparent, rgba(0,0,0,0.05));
+            border-radius: 2px;
+            box-shadow: 4px 4px 15px rgba(0,0,0,0.6);
+            padding: 10px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            gap: 8px;
+        }
+
+        .parchment::before {
+            content: '';
+            position: absolute;
+            left: 50%; top: 0; bottom: 0; width: 1px;
+            background: rgba(142, 124, 98, 0.5);
+            z-index: 1;
+        }
+
+        .page {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .writing-line {
+            height: 2px;
+            background: #4a3320;
+            border-radius: 1px;
+            opacity: 0.7;
+            width: 0%;
+            transition: width 0.3s ease-out;
+        }
+
+        /* --- Controls --- */
+        #controls {
+            padding: 15px;
+            background: #211611;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 8px;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        input, button {
+            background: #2e1b0f;
+            border: 2px solid #5C3A21;
+            color: var(--color-ui-text);
+            font-family: var(--font-main);
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+
+        input[type="number"] { width: 65px; text-align: center; }
+        input[type="text"] { flex: 1; }
+
+        button {
+            width: 100%;
+            max-width: 400px;
+            background: #5C3A21;
+            color: #F0E6D2;
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+            box-shadow: 0 4px 0 #3d2516;
+            transition: transform 0.1s, box-shadow 0.1s;
+        }
+
+        button:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 0 #3d2516;
+        }
+
+        button:disabled { opacity: 0.5; filter: grayscale(1); }
+
+        #timer-display {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 5px;
+            text-align: center;
+            color: var(--color-ui-text);
+        }
+
+        #debug-container {
+            display: none;
+            font-size: 12px;
+            opacity: 0.7;
+            margin-top: 5px;
+        }
+
+        #shelf-container::-webkit-scrollbar { width: 8px; }
+        #shelf-container::-webkit-scrollbar-track { background: #110905; }
+        #shelf-container::-webkit-scrollbar-thumb { background: var(--color-shelf-wood); border-radius: 4px; }
+    </style>
+</head>
+<body>
+
+    <div id="shelf-container"></div>
+
+    <div id="active-area">
+        <div class="hourglass-container" id="hourglass-trigger">
+            <div id="timer-display">25:00</div>
+            <div class="hourglass-frame">
+                <div id="sand-top" class="sand-top"></div>
+                <div id="sand-stream" class="sand-stream"></div>
+                <div id="sand-bottom" class="sand-bottom"></div>
+            </div>
+        </div>
+
+        <div id="parchment" class="parchment">
+            <div id="page-left" class="page"></div>
+            <div id="page-right" class="page"></div>
+        </div>
+    </div>
+
+    <div id="controls">
+        <div class="input-group">
+            <input type="number" id="minutes-input" value="25" min="1" max="240">
+            <input type="text" id="topic-input" placeholder="Fokus..." maxlength="22">
+        </div>
+        <button id="start-btn">Buch aufschlagen</button>
+        <div id="debug-container">
+            <label><input type="checkbox" id="debug-mode"> Debug Mode (60x Speed)</label>
+        </div>
+    </div>
+
+    <script>
+        const VINTAGE_COLORS = ["#4A1C16", "#1A2A3A", "#2A3A2C", "#3D2314", "#543020", "#262626"];
+        const TITLE_COLORS = ["#D4AF37", "#C0C0C0", "#CD7F32", "#B8860B", "#F0E6D2"];
+        const LINES_PER_PAGE = 22;
+
+        let bookshelf = JSON.parse(localStorage.getItem('bookshelf') || '[]');
+        let isRunning = false;
+        let timeLeft = 0;
+        let totalTime = 0;
+        let timerInterval = null;
+        let secretClicks = 0;
+
+        const shelfContainer = document.getElementById('shelf-container');
+        const minutesInput = document.getElementById('minutes-input');
+        const topicInput = document.getElementById('topic-input');
+        const startBtn = document.getElementById('start-btn');
+        const timerDisplay = document.getElementById('timer-display');
+        const sandTop = document.getElementById('sand-top');
+        const sandBottom = document.getElementById('sand-bottom');
+        const sandStream = document.getElementById('sand-stream');
+        const pageLeft = document.getElementById('page-left');
+        const pageRight = document.getElementById('page-right');
+        const debugToggle = document.getElementById('debug-mode');
+        const debugContainer = document.getElementById('debug-container');
+        const hourglassTrigger = document.getElementById('hourglass-trigger');
+
+        function saveBooks() {
+            localStorage.setItem('bookshelf', JSON.stringify(bookshelf));
+        }
+
+        function drawShelf() {
+            shelfContainer.innerHTML = '';
+            
+            // Logic: Group books into shelves, then render newest shelves at the TOP
+            const containerWidth = shelfContainer.clientWidth - 50;
+            let shelves = [];
+            let currentShelfBooks = [];
+            let currentWidth = 0;
+
+            // Grouping (Oldest to Newest)
+            bookshelf.forEach(book => {
+                if (currentWidth + book.width > containerWidth) {
+                    shelves.push(currentShelfBooks);
+                    currentShelfBooks = [];
+                    currentWidth = 0;
+                }
+                currentShelfBooks.push(book);
+                currentWidth += book.width + 4;
+            });
+            if (currentShelfBooks.length > 0) shelves.push(currentShelfBooks);
+
+            // Add one empty shelf at the top if newest is full
+            shelves.push([]); 
+
+            // Rendering (Reverse: Newest at Top)
+            shelves.reverse().forEach(rowBooks => {
+                const shelfEl = document.createElement('div');
+                shelfEl.className = 'shelf';
+                
+                const board = document.createElement('div');
+                board.className = 'shelf-board';
+                shelfEl.appendChild(board);
+
+                rowBooks.forEach(book => {
+                    const bookEl = document.createElement('div');
+                    bookEl.className = 'book';
+                    bookEl.style.width = `${book.width}px`;
+                    bookEl.style.height = `${book.height}px`;
+                    bookEl.style.backgroundColor = book.color;
+                    bookEl.style.color = book.titleColor;
+                    bookEl.style.fontStyle = book.fontStyle;
+                    bookEl.style.fontWeight = book.fontWeight;
+                    
+                    const titleEl = document.createElement('span');
+                    titleEl.className = 'book-title';
+                    titleEl.innerText = book.topic;
+                    bookEl.appendChild(titleEl);
+                    shelfEl.appendChild(bookEl);
+                });
+                shelfContainer.appendChild(shelfEl);
+            });
+        }
+
+        function createParchmentLines() {
+            pageLeft.innerHTML = '';
+            pageRight.innerHTML = '';
+            for(let i=0; i<LINES_PER_PAGE; i++) {
+                let l = document.createElement('div'); l.className = 'writing-line';
+                pageLeft.appendChild(l);
+                let r = document.createElement('div'); r.className = 'writing-line';
+                pageRight.appendChild(r);
+            }
+        }
+
+        function updateVisuals() {
+            const progress = totalTime > 0 ? 1 - (timeLeft / totalTime) : 0;
+            sandTop.style.transform = `scaleY(${1 - progress})`;
+            sandBottom.style.transform = `scaleY(${progress})`;
+            sandStream.style.display = (isRunning && timeLeft > 0) ? 'block' : 'none';
+
+            const m = Math.floor(timeLeft / 60);
+            const s = timeLeft % 60;
+            timerDisplay.innerText = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+
+            const totalLines = LINES_PER_PAGE * 2;
+            const linesToFill = Math.floor(progress * totalLines);
+            const allLines = [...pageLeft.querySelectorAll('.writing-line'), ...pageRight.querySelectorAll('.writing-line')];
+            
+            allLines.forEach((line, idx) => {
+                if (idx < linesToFill) {
+                    if (line.style.width === '0%') line.style.width = `${Math.random() * 40 + 50}%`;
+                } else {
+                    line.style.width = '0%';
+                }
+            });
+        }
+
+        function startTimer() {
+            if (isRunning) return;
+            const mins = parseInt(minutesInput.value) || 25;
+            totalTime = mins * 60;
+            timeLeft = totalTime;
+            isRunning = true;
+            startBtn.disabled = true;
+            createParchmentLines();
+            updateVisuals();
+
+            const tickRate = debugToggle.checked ? 16 : 1000; 
+            timerInterval = setInterval(() => {
+                timeLeft -= debugToggle.checked ? 60 : 1; 
+                if (timeLeft < 0) timeLeft = 0;
+                updateVisuals();
+                if (timeLeft <= 0) finishSession();
+            }, tickRate);
+        }
+
+        function finishSession() {
+            clearInterval(timerInterval);
+            isRunning = false;
+            startBtn.disabled = false;
+
+            const mins = parseInt(minutesInput.value);
+            const bookWidth = Math.max(25, Math.min(90, 25 + (mins * 0.7) + (Math.random() * 15 - 7)));
+            
+            const newBook = {
+                topic: topicInput.value || "Fokus",
+                color: VINTAGE_COLORS[Math.floor(Math.random() * VINTAGE_COLORS.length)],
+                titleColor: TITLE_COLORS[Math.floor(Math.random() * TITLE_COLORS.length)],
+                height: 100 + Math.random() * 40,
+                width: bookWidth,
+                fontStyle: Math.random() > 0.5 ? 'italic' : 'normal',
+                fontWeight: Math.random() > 0.5 ? 'bold' : 'normal'
+            };
+
+            bookshelf.push(newBook);
+            saveBooks();
+            drawShelf();
+            if (window.navigator.vibrate) window.navigator.vibrate(200);
+            
+            timeLeft = parseInt(minutesInput.value) * 60;
+            updateVisuals();
+        }
+
+        // Secret Debug Trigger
+        hourglassTrigger.addEventListener('click', () => {
+            secretClicks++;
+            if (secretClicks >= 5) {
+                debugContainer.style.display = 'block';
+                secretClicks = 0;
+            }
+            setTimeout(() => { if(secretClicks > 0) secretClicks = 0; }, 3000);
+        });
+
+        startBtn.addEventListener('click', startTimer);
+        window.addEventListener('resize', drawShelf);
+        drawShelf();
+        createParchmentLines();
+        timeLeft = parseInt(minutesInput.value) * 60;
+        updateVisuals();
+    </script>
+</body>
+</html>
